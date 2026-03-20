@@ -1,4 +1,3 @@
-
 # 📱 Flemzy Phones Pro - Sales Management System
 
 A complete sales management system with admin approval, seller portal, and profit tracking.
