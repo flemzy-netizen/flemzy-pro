@@ -14,14 +14,18 @@
         .form-group input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; }
         .btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
         .alert { background: #d4edda; color: #155724; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; }
+        .error-alert { background: #f8d7da; color: #721c24; display: none; }
         .links { text-align: center; margin-top: 20px; }
         .links a { color: #667eea; text-decoration: none; }
+        .loading { text-align: center; padding: 10px; color: #666; display: none; }
     </style>
 </head>
 <body>
     <div class="register-container">
         <div class="logo"><h1>Join Flemzy</h1><p>Register as Seller</p></div>
         <div class="alert" id="successAlert">✅ Registered! Wait for admin approval.</div>
+        <div class="alert error-alert" id="errorAlert"></div>
+        <div class="loading" id="loading">Registering...</div>
         <form id="registerForm">
             <div class="form-group"><label>Full Name</label><input type="text" id="fullName" required></div>
             <div class="form-group"><label>Email</label><input type="email" id="email" required></div>
@@ -32,26 +36,74 @@
         </form>
         <div class="links"><p>Have account? <a href="index.html">Login</a></p></div>
     </div>
+
     <script>
-        document.getElementById('registerForm').addEventListener('submit', function(e) {
+        // Google Sheets Script URL - REPLACE WITH YOUR ACTUAL URL
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxUJh4aRdwQ2pMmLzwbXRw696kSF4kImigwAZ_heTo6poUIt_wqarS5sA0gCq/exec';
+        
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
             const name = document.getElementById('fullName').value;
             const email = document.getElementById('email').value;
             const phone = document.getElementById('phone').value;
             const password = document.getElementById('password').value;
             const confirm = document.getElementById('confirmPassword').value;
             
-            if (password !== confirm) { alert('Passwords do not match'); return; }
+            if (password !== confirm) {
+                document.getElementById('errorAlert').style.display = 'block';
+                document.getElementById('errorAlert').innerHTML = '❌ Passwords do not match';
+                return;
+            }
             
-            let users = JSON.parse(localStorage.getItem('users') || '[]');
-            if (users.some(u => u.email === email)) { alert('Email already exists'); return; }
+            const loading = document.getElementById('loading');
+            const successAlert = document.getElementById('successAlert');
+            const errorAlert = document.getElementById('errorAlert');
             
-            users.push({id: Date.now(), name, email, phone, password: btoa(password), status: 'pending', registeredDate: new Date().toISOString()});
-            localStorage.setItem('users', JSON.stringify(users));
+            loading.style.display = 'block';
+            errorAlert.style.display = 'none';
+            successAlert.style.display = 'none';
             
-            document.getElementById('successAlert').style.display = 'block';
-            document.getElementById('registerForm').reset();
-            setTimeout(() => { document.getElementById('successAlert').style.display = 'none'; }, 5000);
+            try {
+                // Check if email already exists
+                const checkResponse = await fetch(`${SCRIPT_URL}?action=getUsers`);
+                const checkResult = await checkResponse.json();
+                const existingUsers = checkResult.data || [];
+                
+                if (existingUsers.some(u => u[1] === email)) {
+                    errorAlert.style.display = 'block';
+                    errorAlert.innerHTML = '❌ Email already registered!';
+                    loading.style.display = 'none';
+                    return;
+                }
+                
+                // Register new user
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        type: 'newUser',
+                        name: name,
+                        email: email,
+                        phone: phone,
+                        password: btoa(password)
+                    })
+                });
+                
+                loading.style.display = 'none';
+                successAlert.style.display = 'block';
+                document.getElementById('registerForm').reset();
+                
+                setTimeout(() => {
+                    successAlert.style.display = 'none';
+                }, 5000);
+                
+            } catch (error) {
+                loading.style.display = 'none';
+                errorAlert.style.display = 'block';
+                errorAlert.innerHTML = '❌ Registration failed. Please try again.';
+                console.error(error);
+            }
         });
     </script>
 </body>
