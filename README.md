@@ -1,4 +1,4 @@
-`markdown
+
 # 📱 Flemzy Phones Pro - Sales Management System
 
 A complete sales management system with admin approval, seller portal, and profit tracking.
@@ -108,8 +108,8 @@ Need help or have questions? Contact us on any platform:
 |----------|------|
 | 💬 WhatsApp | [Chat with us](https://wa.me/233545265893) |
 | 📱 TikTok | [@flemzyphones](https://tiktok.com/@flemzybbn) |
-| 📘 Facebook | [flemzyphones](https://facebook.com/highborn bello) |
-| 📷 Instagram | [@flemzyphones](https://instagram.com/Blezz flemzy highborn) |
+| 📘 Facebook | [flemzyphones](https://facebook.com/highbornbello) |
+| 📷 Instagram | [@flemzyphones](https://instagram.com/Blezzflemzyhighborn) |
 | 🐦 X (Twitter) | [@flemzyphones](https://x.com/flemzy) |
 
 **Response time:** Usually within 24 hours. WhatsApp is fastest!
