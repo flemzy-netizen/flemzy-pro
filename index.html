@@ -17,52 +17,90 @@
         .links { text-align: center; margin-top: 20px; }
         .links a { color: #667eea; text-decoration: none; }
         .alert { background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; margin-bottom: 20px; display: none; }
-        .success-alert { background: #d4edda; color: #155724; display: none; }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <div class="logo"><h1><span>Flemzy Phones</span> Pro</h1><p>Sales Management System</p></div>
+        <div class="logo">
+            <h1><span>Flemzy Phones</span> Pro</h1>
+            <p style="color: #666; margin-top: 10px;">Sales Management System</p>
+        </div>
         <div class="alert" id="loginAlert"></div>
         <form id="loginForm">
-            <div class="form-group"><label>Email</label><input type="text" id="username" required placeholder="Enter your email"></div>
-            <div class="form-group"><label>Password</label><input type="password" id="password" required placeholder="Enter your password"></div>
-            <button type="submit" class="btn">Login</button>
+            <div class="form-group">
+                <label>Email / Username</label>
+                <input type="text" id="username" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="password" required placeholder="Enter your password">
+            </div>
+            <button type="submit" class="btn">Login to Dashboard</button>
         </form>
-        <div class="links"><p>No account? <a href="register.html">Register here</a></p></div>
+        <div class="links">
+            <p>Don't have an account? <a href="register.html">Register here</a></p>
+        </div>
     </div>
+
     <script>
+        // Admin credentials
         const ADMIN_USERNAME = 'flemzy@admin.com';
         const ADMIN_PASSWORD = 'Admin@123';
+        
+        // Check if already logged in
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        if (currentUser) {
+            if (currentUser.role === 'admin') {
+                window.location.href = 'admin.html';
+            } else if (currentUser.role === 'seller') {
+                window.location.href = 'seller.html';
+            }
+        }
         
         document.getElementById('loginForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const alertBox = document.getElementById('loginAlert');
             
+            // Check if admin
             if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                localStorage.setItem('currentUser', JSON.stringify({email: username, role: 'admin', name: 'Flemzy Admin'}));
+                localStorage.setItem('currentUser', JSON.stringify({
+                    email: username,
+                    role: 'admin',
+                    name: 'Flemzy Admin'
+                }));
                 window.location.href = 'admin.html';
                 return;
             }
             
+            // Check regular users
             const users = JSON.parse(localStorage.getItem('users') || '[]');
             const user = users.find(u => u.email === username && u.password === btoa(password));
             
             if (user) {
                 if (user.status === 'approved') {
-                    localStorage.setItem('currentUser', JSON.stringify({email: user.email, role: 'seller', name: user.name, id: user.id}));
+                    localStorage.setItem('currentUser', JSON.stringify({
+                        email: user.email,
+                        role: 'seller',
+                        name: user.name,
+                        id: user.id
+                    }));
                     window.location.href = 'seller.html';
                 } else if (user.status === 'pending') {
-                    document.getElementById('loginAlert').style.display = 'block';
-                    document.getElementById('loginAlert').textContent = '⏳ Pending admin approval';
-                } else {
-                    document.getElementById('loginAlert').style.display = 'block';
-                    document.getElementById('loginAlert').textContent = '❌ Registration rejected';
+                    alertBox.style.display = 'block';
+                    alertBox.innerHTML = '⏳ Your account is pending admin approval. Please wait.';
+                    alertBox.style.background = '#fff3cd';
+                    alertBox.style.color = '#856404';
+                } else if (user.status === 'rejected') {
+                    alertBox.style.display = 'block';
+                    alertBox.innerHTML = '❌ Your registration was rejected. Contact admin for support.';
                 }
             } else {
-                document.getElementById('loginAlert').style.display = 'block';
-                document.getElementById('loginAlert').textContent = '❌ Invalid credentials';
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = '❌ Invalid email or password';
+                alertBox.style.background = '#f8d7da';
+                alertBox.style.color = '#721c24';
             }
         });
     </script>
