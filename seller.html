@@ -12,17 +12,15 @@
         .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: white; padding: 20px; border-radius: 10px; }
-        .stat-card h3 { color: #666; font-size: 14px; }
         .stat-number { font-size: 28px; font-weight: bold; }
         .notice { background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
         .product-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .product-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
-        .product-price { font-size: 24px; color: #28a745; font-weight: bold; margin-bottom: 10px; }
-        .product-stock { margin-bottom: 15px; padding: 5px; border-radius: 5px; }
-        .low-stock { background: #f8d7da; color: #721c24; }
-        .sell-btn { width: 100%; background: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        .product-title { font-size: 18px; font-weight: bold; }
+        .product-price { font-size: 24px; color: #28a745; font-weight: bold; }
+        .sell-btn { width: 100%; background: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .sell-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 400px; width: 90%; }
         .modal input { width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #ddd; border-radius: 5px; }
         .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
@@ -31,6 +29,8 @@
         .sales-history { background: white; border-radius: 10px; padding: 20px; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        .refresh-btn { background: #007bff; color: white; border: none; padding: 8px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 20px; }
+        .loading { text-align: center; padding: 40px; color: #666; }
         @media (max-width: 768px) { .stats-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -40,95 +40,206 @@
         <div><span id="sellerName"></span> <button onclick="logout()">Logout</button></div>
     </div>
     <div class="container">
+        <div style="margin-bottom: 20px;">
+            <button class="refresh-btn" onclick="loadAllData()">🔄 Refresh</button>
+        </div>
+        
         <div class="notice"><strong>📢 Note:</strong> You can only sell products. Contact admin for new items.</div>
+        
         <div class="stats-grid">
             <div class="stat-card"><h3>Your Sales Today</h3><div class="stat-number" id="sellerTodaySales">GHC 0</div></div>
-            <div class="stat-card"><h3>Items Sold</h3><div class="stat-number" id="sellerItemsSold">0</div></div>
+            <div class="stat-card"><h3>Items Sold Today</h3><div class="stat-number" id="sellerItemsSold">0</div></div>
         </div>
-        <h2>📦 Products</h2>
-        <input type="text" id="searchProducts" placeholder="🔍 Search..." style="width:100%; padding:12px; margin:20px 0; border-radius:8px; border:2px solid #ddd;">
-        <div class="products-grid" id="productsGrid"></div>
-        <div class="sales-history"><h2>📋 Your Sales</h2><div style="overflow-x:auto;"><table><thead><tr><th>Date</th><th>Product</th><th>Qty</th><th>Total</th></tr></thead><tbody id="sellerSalesHistory"></tbody></table></div></div>
+        
+        <h2>📦 Available Products</h2>
+        <input type="text" id="searchProducts" placeholder="🔍 Search products..." style="width:100%; padding:12px; margin:20px 0; border-radius:8px; border:2px solid #ddd;">
+        
+        <div class="products-grid" id="productsGrid">Loading...</div>
+        
+        <div class="sales-history">
+            <h2>📋 Your Sales History</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>Date</th><th>Product</th><th>Quantity</th><th>Total</th></tr></thead>
+                    <tbody id="sellerSalesHistory"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
-    <div class="modal" id="sellModal"><div class="modal-content"><h3 id="modalProductName"></h3><p>Price: GHC <span id="modalProductPrice">0</span></p><p>Available: <span id="modalProductStock">0</span></p><input type="number" id="sellQuantity" placeholder="Quantity" min="1" value="1"><p>Total: GHC <span id="modalTotal">0</span></p><div class="modal-buttons"><button class="btn-confirm" onclick="confirmSell()">Confirm</button><button class="btn-cancel" onclick="closeModal()">Cancel</button></div></div></div>
+    
+    <div class="modal" id="sellModal">
+        <div class="modal-content">
+            <h3 id="modalProductName"></h3>
+            <p>Price: GHC <span id="modalProductPrice">0</span></p>
+            <p>Available: <span id="modalProductStock">0</span></p>
+            <input type="number" id="sellQuantity" min="1" value="1">
+            <p>Total: GHC <span id="modalTotal">0</span></p>
+            <div class="modal-buttons">
+                <button class="btn-confirm" onclick="confirmSell()">Confirm Sale</button>
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/YOUR_ACTUAL_URL/exec'; // REPLACE WITH YOUR URL
+        
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        if (currentUser.role !== 'seller') { window.location.href = 'index.html'; }
+        if (currentUser.role !== 'seller') {
+            window.location.href = 'index.html';
+        }
         document.getElementById('sellerName').innerHTML = 'Hi, ' + (currentUser.name || 'Seller');
         
-        let products = JSON.parse(localStorage.getItem('products') || '[]');
-        let sales = JSON.parse(localStorage.getItem('sales') || '[]');
+        let products = [];
+        let sales = [];
         let currentProduct = null;
         
-        if (products.length === 0) {
-            products = [{id:1, name:'iPhone 13', sellingPrice:4500, quantity:10},{id:2, name:'Samsung S21', sellingPrice:3200, quantity:8},{id:3, name:'Fast Charger', sellingPrice:150, quantity:5}];
-            localStorage.setItem('products', JSON.stringify(products));
+        async function loadAllData() {
+            try {
+                document.getElementById('productsGrid').innerHTML = '<div class="loading">Loading products...</div>';
+                
+                // Load products
+                const productsRes = await fetch(`${SCRIPT_URL}?action=getProducts`);
+                const productsResult = await productsRes.json();
+                products = productsResult.data || [];
+                
+                // Load sales
+                const salesRes = await fetch(`${SCRIPT_URL}?action=getSales`);
+                const salesResult = await salesRes.json();
+                sales = salesResult.data || [];
+                
+                renderProducts();
+                renderSales();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('productsGrid').innerHTML = '<p style="color:red">Error loading data. Please refresh.</p>';
+            }
         }
         
         function renderProducts() {
             const search = document.getElementById('searchProducts')?.value.toLowerCase() || '';
-            const filtered = products.filter(p => p.name.toLowerCase().includes(search));
-            document.getElementById('productsGrid').innerHTML = filtered.map(p => `
-                <div class="product-card">
-                    <div class="product-title">${p.name}</div>
-                    <div class="product-price">GHC ${p.sellingPrice}</div>
-                    <div class="product-stock ${p.quantity < 5 ? 'low-stock' : ''}">Stock: ${p.quantity} ${p.quantity < 5 ? '⚠️' : ''}</div>
-                    <button class="sell-btn" onclick="openSellModal(${p.id})" ${p.quantity < 1 ? 'disabled style="background:#ccc;"' : ''}>${p.quantity < 1 ? 'Out of Stock' : 'Sell'}</button>
-                </div>
-            `).join('');
+            const filtered = products.filter(p => p[1]?.toLowerCase().includes(search));
+            
+            if (filtered.length === 0) {
+                document.getElementById('productsGrid').innerHTML = '<p>No products found</p>';
+                return;
+            }
+            
+            document.getElementById('productsGrid').innerHTML = filtered.map(p => {
+                const id = p[0];
+                const name = p[1];
+                const price = parseFloat(p[3]);
+                const quantity = parseInt(p[5]);
+                
+                return `
+                    <div class="product-card">
+                        <div class="product-title">${name}</div>
+                        <div class="product-price">GHC ${price}</div>
+                        <div>Stock: ${quantity} ${quantity < 5 ? '⚠️ Low!' : ''}</div>
+                        <button class="sell-btn" onclick="openSellModal('${id}', '${name}', ${price}, ${quantity})" ${quantity < 1 ? 'disabled' : ''}>
+                            ${quantity < 1 ? 'Out of Stock' : 'Sell Now'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
         
         function renderSales() {
-            const mySales = sales.filter(s => s.sellerId === currentUser.id);
-            let todayTotal = 0, items = 0;
+            const mySales = sales.filter(s => s[3] === currentUser.email);
+            let todayTotal = 0;
+            let itemsCount = 0;
             const today = new Date().toDateString();
+            
             document.getElementById('sellerSalesHistory').innerHTML = mySales.map(s => {
-                const p = products.find(p => p.id === s.productId);
-                const total = p.sellingPrice * s.quantity;
-                if (new Date(s.date).toDateString() === today) { todayTotal += total; items += s.quantity; }
-                return `<tr><td>${new Date(s.date).toLocaleString()}</td><td>${p.name}</td><td>${s.quantity}</td><td>GHC ${total}</td></tr>`;
+                const product = products.find(p => p[0] == s[1]);
+                const productName = product ? product[1] : 'Unknown';
+                const total = parseFloat(s[6]) || 0;
+                const saleDate = new Date(s[5]).toDateString();
+                
+                if (saleDate === today) {
+                    todayTotal += total;
+                    itemsCount += parseInt(s[4]);
+                }
+                
+                return `
+                    <tr>
+                        <td>${new Date(s[5]).toLocaleString()}</td>
+                        <td>${productName}</td>
+                        <td>${s[4]}</td>
+                        <td>GHC ${total.toFixed(2)}</td>
+                    </tr>
+                `;
             }).join('');
-            document.getElementById('sellerTodaySales').innerHTML = 'GHC ' + todayTotal;
-            document.getElementById('sellerItemsSold').innerHTML = items;
+            
+            document.getElementById('sellerTodaySales').innerHTML = 'GHC ' + todayTotal.toFixed(2);
+            document.getElementById('sellerItemsSold').innerHTML = itemsCount;
         }
         
-        window.openSellModal = function(id) {
-            currentProduct = products.find(p => p.id === id);
-            if (!currentProduct || currentProduct.quantity < 1) return;
-            document.getElementById('modalProductName').innerHTML = currentProduct.name;
-            document.getElementById('modalProductPrice').innerHTML = currentProduct.sellingPrice;
-            document.getElementById('modalProductStock').innerHTML = currentProduct.quantity;
+        window.openSellModal = function(id, name, price, stock) {
+            currentProduct = { id, name, price, stock };
+            document.getElementById('modalProductName').innerHTML = name;
+            document.getElementById('modalProductPrice').innerHTML = price;
+            document.getElementById('modalProductStock').innerHTML = stock;
             document.getElementById('sellQuantity').value = 1;
-            document.getElementById('sellQuantity').max = currentProduct.quantity;
+            document.getElementById('sellQuantity').max = stock;
             updateTotal();
             document.getElementById('sellModal').style.display = 'flex';
         };
         
         function updateTotal() {
             const qty = parseInt(document.getElementById('sellQuantity').value) || 0;
-            document.getElementById('modalTotal').innerHTML = (qty * currentProduct.sellingPrice).toFixed(2);
+            document.getElementById('modalTotal').innerHTML = (qty * currentProduct.price).toFixed(2);
         }
         
-        window.confirmSell = function() {
+        window.confirmSell = async function() {
             const qty = parseInt(document.getElementById('sellQuantity').value);
-            if (qty < 1 || qty > currentProduct.quantity) { alert('Invalid quantity'); return; }
-            currentProduct.quantity -= qty;
-            localStorage.setItem('products', JSON.stringify(products));
-            sales.push({id: Date.now(), productId: currentProduct.id, sellerId: currentUser.id, sellerName: currentUser.name, quantity: qty, date: new Date().toISOString()});
-            localStorage.setItem('sales', JSON.stringify(sales));
-            closeModal();
-            renderProducts();
-            renderSales();
-            alert('✅ Sale recorded!');
+            if (qty < 1 || qty > currentProduct.stock) {
+                alert('Invalid quantity');
+                return;
+            }
+            
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        type: 'newSale',
+                        id: Date.now().toString(),
+                        productId: currentProduct.id,
+                        sellerId: currentUser.email,
+                        sellerName: currentUser.name,
+                        quantity: qty,
+                        sellingPrice: currentProduct.price
+                    })
+                });
+                
+                closeModal();
+                setTimeout(() => {
+                    loadAllData();
+                    alert('✅ Sale recorded successfully!');
+                }, 1000);
+                
+            } catch (error) {
+                alert('Error recording sale');
+            }
         };
         
-        window.closeModal = function() { document.getElementById('sellModal').style.display = 'none'; };
-        window.logout = function() { localStorage.removeItem('currentUser'); window.location.href = 'index.html'; };
+        window.closeModal = function() {
+            document.getElementById('sellModal').style.display = 'none';
+            currentProduct = null;
+        };
+        
+        window.logout = function() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        };
         
         document.getElementById('searchProducts')?.addEventListener('input', renderProducts);
         document.getElementById('sellQuantity')?.addEventListener('input', updateTotal);
-        renderProducts();
-        renderSales();
+        
+        loadAllData();
+        setInterval(loadAllData, 30000);
     </script>
 </body>
 </html>
